@@ -26,7 +26,6 @@
   },
   "devDependencies": {
     "browserify": "17.0.0",
-    "husky": "8.0.3",
     "nodemon": "3.1.0",
     "standard": "*",
     "stylus": "0.62.0",
@@ -45,14 +44,11 @@
     "build": "npm run build-css && npm run build-js",
     "build-css": "stylus css/main.styl -o static/ -c",
     "build-js": "browserify client > static/bundle.js",
-    "deploy": "./tools/trigger-deploy.sh",
-    "prepare": "husky install",
     "size": "npm run size-js && npm run size-css",
     "size-css": "npm run build-css && cat static/main.css | gzip | wc -c",
     "size-js": "npm run build-js && cat static/bundle.js | gzip | wc -c",
     "start": "node server",
     "test": "standard",
-    "update-authors": "./tools/update-authors.sh",
     "watch": "npm run watch-css & npm run watch-js & DEBUG=instant* nodemon server",
     "watch-css": "stylus css/main.styl -o static/ -w",
     "watch-js": "watchify client -o static/bundle.js -dv"
