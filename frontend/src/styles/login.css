@@ -1,0 +1,51 @@
+.container1{
+  width: 400px;
+}
+.container2{
+  width: 400px;    
+}
+.img1{
+  object-fit: cover;
+  display: block;
+  height: 100%;
+  width: 100%;       
+}
+
+
+input[type=text] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 2px solid rgb(86, 107, 240);
+}
+
+input[type=email] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 2px solid rgb(86, 107, 240);
+}
+
+input[type=password] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 2px solid rgb(86, 107, 240);
+}
+
+.container3{
+  display: flex;
+ justify-content: center;
+  gap: 10px;
+}
+#btn{
+  border-radius: 50px;      
+  cursor: pointer;
+  width:100px
+}

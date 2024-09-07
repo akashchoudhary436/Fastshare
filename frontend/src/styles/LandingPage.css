@@ -1,0 +1,31 @@
+/* src/pages/LandingPage.css */
+
+.landing-container {
+  text-align: center;
+  padding: 50px;
+}
+
+.landing-header {
+  margin-bottom: 30px;
+}
+
+.landing-main {
+  margin-top: 20px;
+}
+
+.btn {
+  display: inline-block;
+  margin: 10px;
+  padding: 10px 20px;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.btn-primary {
+  background-color: #007bff;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+}
