@@ -1,5 +1,5 @@
 const compress = require('compression');
-const cors = require('cors'); // Still needed for other potential CORS usage
+const cors = require('cors');
 const express = require('express');
 const http = require('http');
 const pug = require('pug');
@@ -13,10 +13,10 @@ const app = express();
 // Create an HTTP server
 const server = http.createServer(app);
 
-// Set the port
-const PORT = Number(process.argv[2]) || 5001; // Server will default to port 5001 if no port is specified
+// Set the port from environment variable or default to 5001
+const PORT = process.env.PORT || 5001;
 
-// Trust "X-Forwarded-For" and "X-Forwarded-Proto" nginx headers
+// Trust "X-Forwarded-For" and "X-Forwarded-Proto" headers
 app.enable('trust proxy');
 
 // Disable "powered by express" header
@@ -33,19 +33,50 @@ app.set('json spaces', 2);
 // Use GZIP
 app.use(compress());
 
+// CORS whitelist
+const CORS_WHITELIST = [
+  'http://rollcall.audio',
+  'https://rollcall.audio'
+];
+
+// Load secret configuration
+let secret;
+try {
+  secret = require('../secret');
+} catch (err) {
+  // Handle error if secret configuration is missing
+}
+
 // Security and performance middleware
 app.use((req, res, next) => {
   if (config.isProd) {
+    // Redirect HTTP to HTTPS
+    if (req.protocol !== 'https') {
+      return res.redirect('https://' + req.hostname + req.url);
+    }
+
+    // Redirect 'www.' subdomain to non-'www.' domain
+    if (req.hostname.startsWith('www.')) {
+      const nonWwwHost = req.hostname.substring(4); // Remove 'www.' prefix
+      return res.redirect('https://' + nonWwwHost + req.url);
+    }
+
+    // Set security headers
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
+
+  // Add CORS headers for specific font file types
   const extname = path.extname(req.url);
-  if (['.eot', '.ttf', '.otf', '.woff', '.woff2'].indexOf(extname) >= 0) {
+  if (['.eot', '.ttf', '.otf', '.woff', '.woff2'].includes(extname)) {
     res.header('Access-Control-Allow-Origin', '*');
   }
+
+  // Set additional security headers
   res.header('X-Content-Type-Options', 'nosniff');
   res.header('X-Frame-Options', 'DENY');
   res.header('X-XSS-Protection', '1; mode=block');
   res.header('X-UA-Compatible', 'IE=Edge,chrome=1');
+
   next();
 });
 
@@ -58,13 +89,20 @@ app.get('/torrent', (req, res) => {
 });
 
 // Routes
-app.get('/torrentshare', (req, res) => {
+app.get('/', (req, res) => {
   res.render('index', {
-    title: 'FastShare'
+    title: 'Fastshare - Streaming file transfer over WebTorrent'
   });
 });
 
-app.get('/__rtcConfig__', (req, res) => {
+app.get('/__rtcConfig__', cors({
+  origin: (origin, cb) => {
+    const allowed = CORS_WHITELIST.indexOf(origin) >= 0 ||
+      /https?:\/\/localhost(:|$)/.test(origin) ||
+      /https?:\/\/airtap\.local(:|$)/.test(origin);
+    cb(null, allowed);
+  }
+}), (req, res) => {
   // Hardcoded WebRTC configuration
   const rtcConfig = {
     iceServers: [
@@ -86,7 +124,7 @@ app.get('/__rtcConfig__', (req, res) => {
 
 app.get('*', (req, res) => {
   res.status(404).render('error', {
-    title: '404 Page Not Found - Instant.io',
+    title: '404 Page Not Found',
     message: '404 Not Found'
   });
 });
@@ -102,6 +140,6 @@ app.use((err, req, res, next) => {
 });
 
 // Start the server
-server.listen(PORT, '127.0.0.1', () => {
-  console.log('listening on port %s', server.address().port);
+server.listen(PORT, () => {
+  console.log('Server is listening on port %s', PORT);
 });

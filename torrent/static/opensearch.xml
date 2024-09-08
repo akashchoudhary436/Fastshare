@@ -4,5 +4,6 @@
   <ShortName>FastShare</ShortName>
   <Description>FastShare</Description>
   <InputEncoding>UTF-8</InputEncoding>
-      template="https://instant.io/#{searchTerms}"/>
+  <Url method="get" type="text/html"
+         template="https://fastshare.cz/search?q={searchTerms}"/>
 </OpenSearchDescription>

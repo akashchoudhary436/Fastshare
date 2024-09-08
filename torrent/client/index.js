@@ -12,7 +12,7 @@ const getRtcConfig = (cb) => {
       { urls: 'stun:global.stun.twilio.com:3478' },
       { urls: 'stun:stun.services.mozilla.com' },
       { urls: 'stun:stun.ekiga.net' },
-  
+
       // TURN Servers (no authentication)
       { urls: 'turn:turn.anyfirewall.com:443?transport=udp' },
       { urls: 'turn:turn.anyfirewall.com:443?transport=tcp' }
@@ -41,14 +41,19 @@ const JSZip = require('jszip');
 const SimplePeer = require('simple-peer');
 const util = require('./util');
 const debug = require('debug');
-// WebTorrent announce list
-globalThis.WEBTORRENT_ANNOUNCE = createTorrent.announceList
-  .map(arr => arr[0])
-  .filter(url => url.startsWith('wss://') || url.startsWith('ws://'));
 
-const DISALLOWED = [
-  '6feb54706f41f459f819c0ae5b560a21ebfead8f'
-];
+
+// Define your custom torrent tracker
+const customTracker = 'wss://torrent-tracker.onrender.com';
+
+// Extract global trackers from `createTorrent.announceList`
+const globalTrackers = createTorrent.announceList
+  .map(arr => arr[0])  // Extract URLs from the announce list
+  .filter(url => url.startsWith('wss://') || url.startsWith('ws://'));  // Filter for WebSocket URLs
+
+// Set the `WEBTORRENT_ANNOUNCE` array to use the custom tracker first, then the global trackers
+globalThis.WEBTORRENT_ANNOUNCE = [customTracker, ...globalTrackers];
+
 
 // Create WebTorrent client
 const getClient = thunky(function (cb) {
@@ -62,12 +67,12 @@ const getClient = thunky(function (cb) {
           ],
           sdpSemantics: 'unified-plan',
           bundlePolicy: 'max-bundle',
-          iceCandidatePoolSize: 1,
+          iceCandidatePoolSize: 20,
         }
       },
       dht: true, // Enable DHT for better peer discovery
       utp: true, // Enable uTP for efficient bandwidth usage
-      maxConnections: 100, // Increase connections limit
+      maxConnections: 200, // Increase connections limit
       uploads: {
         maxUploadSpeed: 0, // Unlimited upload speed
         maxDownloadSpeed: 0 // Unlimited download speed
@@ -158,18 +163,13 @@ function isNotTorrentFile(file) {
 
 // Download a torrent by ID
 function downloadTorrent(torrentId) {
-  const disallowed = DISALLOWED.some(infoHash => torrentId.indexOf(infoHash) >= 0);
-
-  if (disallowed) {
-    util.log('File not found ' + torrentId);
-  } else {
-    util.log('Downloading torrent from ' + torrentId);
-    getClient((err, client) => {
-      if (err) return util.error(err);
-      client.add(torrentId, onTorrent);
-    });
-  }
+  util.log('Downloading torrent from ' + torrentId);
+  getClient((err, client) => {
+    if (err) return util.error(err);
+    client.add(torrentId, onTorrent);
+  });
 }
+
 
 // Download a torrent file
 function downloadTorrentFile(file) {
@@ -183,7 +183,7 @@ function downloadTorrentFile(file) {
 // Seed files
 function seed(files) {
   if (files.length === 0) return;
-  util.log('Seeding ' + files.length + ' files');
+
 
   // Seed from WebTorrent
   getClient((err, client) => {
@@ -191,6 +191,98 @@ function seed(files) {
     client.seed(files, onTorrent);
   });
 }
+// Inject CSS styles into the document
+// Inject CSS styles into the document
+const style = document.createElement('style');
+style.textContent = `
+  /* Container for torrent information */
+  .torrent-info-container {
+    margin: 20px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+
+  /* Style for the torrent info text */
+  .torrent-info {
+    font-size: 16px;
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+
+  /* Style for the info hash container */
+  .info-hash-container {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+  }
+
+  /* Style for the info hash box */
+  .info-hash-box {
+    padding: 10px;
+    font-family: monospace;
+    background-color: #e0e0e0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none; /* Prevent text selection */
+    margin-left: 10px;
+  }
+
+  /* Hover effect for info hash box */
+  .info-hash-box:hover {
+    background-color: #d0d0d0;
+  }
+
+  /* Style for the share link */
+  .share-link {
+    margin-top: 10px;
+    font-size: 18px; /* Increase font size */
+    font-weight: bold; /* Make text bold */
+  }
+
+  .share-link a {
+    color: #007bff; /* Blue color for the link */
+    text-decoration: none; /* Remove underline */
+  }
+
+  .share-link a:hover {
+    text-decoration: underline; /* Underline on hover */
+  }
+
+  /* Container for file download links with a fixed size and scrollbar */
+  .file-links-container {
+    margin-top: 20px;
+    max-height: 200px; /* Adjust height as needed */
+    overflow-y: auto; /* Add vertical scrollbar if content overflows */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+  }
+
+  /* Style for file download links */
+  .file-link {
+    display: block;
+    margin-bottom: 5px;
+    color: #007bff;
+    text-decoration: none;
+  }
+
+  .file-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Style for the single-line speed information */
+  .speed-info {
+    font-size: 14px;
+    white-space: nowrap; /* Ensure single line display */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis for overflow */
+  }
+`;
+document.head.appendChild(style);
 
 // Handle torrent events
 function onTorrent(torrent) {
@@ -198,22 +290,119 @@ function onTorrent(torrent) {
   torrent.on('error', util.error);
 
   const upload = document.querySelector('input[name=upload]');
-  if (upload) upload.value = upload.defaultValue; // reset upload element
+  if (upload) upload.value = upload.defaultValue; // Reset upload element
 
-  const torrentFileName = path.basename(torrent.name, path.extname(torrent.name)) + '.torrent';
+  // Create or update the torrent info container
+  let torrentInfoContainer = document.querySelector('.torrent-info-container');
+  if (!torrentInfoContainer) {
+    torrentInfoContainer = document.createElement('div');
+    torrentInfoContainer.className = 'torrent-info-container';
+    util.appendElemToLog(torrentInfoContainer);
+  } else {
+    torrentInfoContainer.innerHTML = ''; // Clear previous content
+  }
 
-  util.log('"' + torrentFileName + '" contains ' + torrent.files.length + ' files:');
+  // Calculate total size of all files in the torrent
+  const totalSize = torrent.files.reduce((sum, file) => sum + file.length, 0);
 
-  torrent.files.forEach(file => {
-    util.unsafeLog('&nbsp;&nbsp;- ' + escapeHtml(file.name) + ' (' + escapeHtml(prettierBytes(file.length)) + ')');
+  // Create and append elements to the torrent info container
+  const totalSizeElement = document.createElement('p');
+  totalSizeElement.className = 'torrent-info';
+  totalSizeElement.innerHTML = `<strong>${torrent.files.length} files with a total size of ${prettierBytes(totalSize)}</strong>`;
+  
+  const infoHashElement = document.createElement('div');
+  infoHashElement.className = 'info-hash-container';
+
+  const infoHashBox = document.createElement('div');
+  infoHashBox.className = 'info-hash-box';
+  infoHashBox.textContent = torrent.infoHash;
+  infoHashBox.addEventListener('click', () => {
+    navigator.clipboard.writeText(torrent.infoHash)
+      .then(() => {
+        // Show a temporary message to indicate successful copy
+        const copiedMessage = document.createElement('div');
+        copiedMessage.textContent = 'Copied!';
+        copiedMessage.style.position = 'absolute';
+        copiedMessage.style.backgroundColor = '#4caf50';
+        copiedMessage.style.color = '#fff';
+        copiedMessage.style.padding = '5px';
+        copiedMessage.style.borderRadius = '3px';
+        copiedMessage.style.zIndex = '1000';
+        copiedMessage.style.top = '10px';
+        copiedMessage.style.right = '10px';
+        document.body.appendChild(copiedMessage);
+        setTimeout(() => {
+          document.body.removeChild(copiedMessage);
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy: ', err);
+      });
   });
 
-  util.log('Torrent info hash: ' + torrent.infoHash);
-  util.unsafeLog(
-    '<a href="/torrentshare#' + escapeHtml(torrent.infoHash) + '" onclick="prompt(\'Share this link with anyone you want to download this torrent:\', this.href);return false;">[Share link]</a> ' +
-    '<a href="' + escapeHtml(torrent.magnetURI) + '" target="_blank">[Magnet URI]</a> ' +
-    '<a href="' + escapeHtml(torrent.torrentFileBlobURL) + '" target="_blank" download="' + escapeHtml(torrentFileName) + '">[Download .torrent]</a>'
-  );
+  infoHashElement.appendChild(infoHashBox);
+  torrentInfoContainer.appendChild(totalSizeElement);
+  torrentInfoContainer.appendChild(infoHashElement);
+
+  const shareLinkElement = document.createElement('p');
+  shareLinkElement.className = 'share-link';
+
+  const shareLink = document.createElement('a');
+  shareLink.href = `/#${escapeHtml(torrent.infoHash)}`;
+  shareLink.textContent = '[Share link]';
+  shareLink.style.cursor = 'pointer';
+  shareLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigator.clipboard.writeText(shareLink.href)
+      .then(() => {
+        // Show a temporary message to indicate successful copy
+        const copiedMessage = document.createElement('div');
+        copiedMessage.textContent = 'Share link copied!';
+        copiedMessage.style.position = 'absolute';
+        copiedMessage.style.backgroundColor = '#4caf50';
+        copiedMessage.style.color = '#fff';
+        copiedMessage.style.padding = '5px';
+        copiedMessage.style.borderRadius = '3px';
+        copiedMessage.style.zIndex = '1000';
+        copiedMessage.style.top = '10px';
+        copiedMessage.style.right = '10px';
+        document.body.appendChild(copiedMessage);
+        setTimeout(() => {
+          document.body.removeChild(copiedMessage);
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+  });
+
+  shareLinkElement.appendChild(shareLink);
+  torrentInfoContainer.appendChild(shareLinkElement);
+
+  // Create or update the file links container
+  let fileLinksContainer = document.querySelector('.file-links-container');
+  if (!fileLinksContainer) {
+    fileLinksContainer = document.createElement('div');
+    fileLinksContainer.className = 'file-links-container';
+    util.appendElemToLog(fileLinksContainer);
+  } else {
+    fileLinksContainer.innerHTML = ''; // Clear previous content
+  }
+
+  // Append individual file download links
+  torrent.files.forEach(file => {
+    file.getBlobURL((err, url) => {
+      if (err) return util.error(err);
+
+      const a = document.createElement('a');
+      a.target = '_blank';
+      a.download = file.name;
+      a.href = url;
+      a.textContent = `Download ${file.name}`;
+      a.className = 'file-link';
+      fileLinksContainer.appendChild(a);
+    });
+  });
 
   function updateSpeed() {
     const progress = (100 * torrent.progress).toFixed(1);
@@ -229,11 +418,13 @@ function onTorrent(torrent) {
     }
 
     util.updateSpeed(
-      '<b>Peers:</b> ' + torrent.numPeers + ' ' +
-      '<b>Progress:</b> ' + progress + '% ' +
-      '<b>Download speed:</b> ' + prettierBytes(window.client.downloadSpeed) + '/s ' +
-      '<b>Upload speed:</b> ' + prettierBytes(window.client.uploadSpeed) + '/s ' +
-      '<b>ETA:</b> ' + remaining
+      `<div class="speed-info">` +
+      `<b>Peers:</b> ${torrent.numPeers} &nbsp;` +
+      `<b>Progress:</b> ${progress}% &nbsp;` +
+      `<b>Download speed:</b> ${prettierBytes(window.client.downloadSpeed)}/s &nbsp;` +
+      `<b>Upload speed:</b> ${prettierBytes(window.client.uploadSpeed)}/s &nbsp;` +
+      `<b>ETA:</b> ${remaining}` +
+      `</div>`
     );
   }
 
@@ -241,50 +432,6 @@ function onTorrent(torrent) {
   torrent.on('upload', throttle(updateSpeed, 250));
   setInterval(updateSpeed, 5000);
   updateSpeed();
-
-  torrent.files.forEach(file => {
-    // Append file
-    file.getBlobURL((err, url) => {
-      if (err) return util.error(err);
-
-      const a = document.createElement('a');
-      a.target = '_blank';
-      a.download = file.name;
-      a.href = url;
-      a.textContent = 'Download ' + file.name;
-      util.appendElemToLog(a);
-    });
-  });
-
-  const downloadZip = document.createElement('a');
-  downloadZip.href = '#';
-  downloadZip.target = '_blank';
-  downloadZip.textContent = 'Download all files as zip';
-  downloadZip.addEventListener('click', (event) => {
-    let addedFiles = 0;
-    const zipFilename = path.basename(torrent.name, path.extname(torrent.name)) + '.zip';
-    let zip = new JSZip();
-    event.preventDefault();
-
-    torrent.files.forEach(file => {
-      file.getBlob((err, blob) => {
-        addedFiles += 1;
-        if (err) return util.error(err);
-
-        zip.file(file.name, blob);
-        if (addedFiles === torrent.files.length) {
-          zip.generateAsync({ type: 'blob' }).then(blob => {
-            const url = URL.createObjectURL(blob);
-            downloadZip.href = url;
-            downloadZip.download = zipFilename;
-            downloadZip.click();
-            URL.revokeObjectURL(url);
-          });
-        }
-      });
-    });
-  });
-  util.appendElemToLog(downloadZip);
 }
 
 // Start the application

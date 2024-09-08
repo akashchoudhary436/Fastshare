@@ -1,7 +1,10 @@
 {
-  "name": "fastshare",
+  "name": "Fastshare",
   "description": "Secure, anonymous, streaming file transfer",
   "version": "1.0.0",
+  "author": {
+    "name": "Akash Choudhary"
+  },
   "dependencies": {
     "compression": "1.7.4",
     "cors": "2.8.5",
@@ -11,7 +14,7 @@
     "drag-drop": "7.2.0",
     "escape-html": "1.0.3",
     "express": "4.18.2",
-    "fastshare": "file:",
+    "Fastshare": "file:",
     "instant.io": "file:",
     "jszip": "3.10.1",
     "prettier-bytes": "1.0.4",
@@ -26,29 +29,33 @@
   },
   "devDependencies": {
     "browserify": "17.0.0",
+    "husky": "8.0.3",
     "nodemon": "3.1.0",
     "standard": "*",
     "stylus": "0.62.0",
     "watchify": "4.0.0"
   },
-  "homepage": "FastShare.com",
   "keywords": [
     "data channel",
     "file transfer",
     "p2p",
     "webrtc"
   ],
+  "license": "MIT",
   "main": "index.js",
   "private": true,
   "scripts": {
     "build": "npm run build-css && npm run build-js",
     "build-css": "stylus css/main.styl -o static/ -c",
     "build-js": "browserify client > static/bundle.js",
+    "deploy": "./tools/trigger-deploy.sh",
+    "prepare": "husky install",
     "size": "npm run size-js && npm run size-css",
     "size-css": "npm run build-css && cat static/main.css | gzip | wc -c",
     "size-js": "npm run build-js && cat static/bundle.js | gzip | wc -c",
     "start": "node server",
     "test": "standard",
+    "update-authors": "./tools/update-authors.sh",
     "watch": "npm run watch-css & npm run watch-js & DEBUG=instant* nodemon server",
     "watch-css": "stylus css/main.styl -o static/ -w",
     "watch-js": "watchify client -o static/bundle.js -dv"
