@@ -32,16 +32,10 @@ const rtcConfig = {
   iceCandidatePoolSize: 20
 };
 
-// Define custom torrent tracker
-const customTracker = 'wss://tracker.fastsharetorrent.me';  
 
-// Extract global trackers from `createTorrent.announceList`
-const globalTrackers = createTorrent.announceList
-  .map(arr => arr[0])
-  .filter(url => url.startsWith('wss://') || url.startsWith('ws://'));
-
-// Set the `WEBTORRENT_ANNOUNCE` array to use the custom tracker first, then the global trackers
-globalThis.WEBTORRENT_ANNOUNCE = [customTracker, ...globalTrackers];
+globalThis.WEBTORRENT_ANNOUNCE = [
+  'wss://tracker.fastsharetorrent.me',
+];
 
 // Create WebTorrent client
 const getClient = thunky(function (cb) {
