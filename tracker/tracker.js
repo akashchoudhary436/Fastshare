@@ -3,9 +3,9 @@ import http from 'http';
 
 // Create the tracker server
 const server = new Server({
-  udp: false, // Disable UDP server
+  udp: false,  // Disable UDP server
   http: false, // Disable HTTP server
-  ws: true,   // Enable WebSocket server
+  ws: true,    // Enable WebSocket server
   stats: true, // Enable web-based statistics
   trustProxy: false, // Enable trusting x-forwarded-for header for remote IP
   filter: function (infoHash, params, cb) {
@@ -14,50 +14,43 @@ const server = new Server({
   }
 });
 
-// Internal WebSocket server exposed as public property.
-server.ws;
+// Handle WebSocket upgrade and simple HTTP requests
+const wsServer = http.createServer((req, res) => {
+  if (req.headers['upgrade'] !== 'websocket') {
+    // Handle regular HTTP request
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Tracker is running');
+  }
+});
 
+// Start listening on the specified port and hostname
+const port = 8000;
+const hostname = '0.0.0.0';
+wsServer.listen(port, hostname, () => {
+  console.log(`Server is running and WebSocket tracker is listening on ws://${hostname}:${port}`);
+});
+
+// Attach the WebSocket tracker to the HTTP server
+server.ws.listen(wsServer);
+
+// Handle WebSocket tracker events
 server.on('error', function (err) {
-  // Fatal server error!
-  console.log(err.message);
+  console.log('Fatal server error:', err.message);
 });
 
 server.on('warning', function (err) {
-  // Client sent bad data. Probably not a problem, just a buggy client.
-  console.log(err.message);
+  console.log('Client sent bad data:', err.message);
 });
 
 server.on('listening', function () {
-  // Fired when the WebSocket server is listening
-
-  // WebSocket
   const wsAddr = server.ws.address();
   const wsHost = wsAddr.address !== '::' ? wsAddr.address : 'localhost';
   const wsPort = wsAddr.port;
   console.log(`WebSocket tracker: ws://${wsHost}:${wsPort}`);
 });
 
-// Start tracker server listening! Use a specific port number.
-const port = 8000; // Example port number
-const hostname = '0.0.0.0'; // Bind to all available network interfaces
-server.listen(port, hostname, () => {
-  console.log('Tracker server is listening on port ' + port + '...');
-});
-
-// Create an HTTP server to handle HTTP requests and return a message
-const httpServer = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Tracker is running');
-});
-
-// Start the HTTP server on the same port
-httpServer.listen(port, hostname, () => {
-  console.log('HTTP server is running on port ' + port + '...');
-});
-
-// Listen for individual tracker messages from peers:
 server.on('start', function (addr) {
-  console.log('Got start message from ' + addr);
+  console.log('Got start message from', addr);
 });
 
 server.on('complete', function (addr) {});
