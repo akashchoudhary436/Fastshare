@@ -46,8 +46,8 @@ const getClient = thunky(function (cb) {
     tracker: {
       rtcConfig
     },
-    dht: true,
-    utp: true,
+    dht: false,
+    utp: false,
     maxConnections: 200,
     uploads: {
       maxUploadSpeed: 0,
