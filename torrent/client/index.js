@@ -35,7 +35,7 @@ const rtcConfig = {
 };
 
 // Define custom torrent tracker
-const customTracker = 'wss://torrent.fastsharetorrent.me';
+const customTracker = 'wss://tracker.fastsharetorrent.me';  
 
 // Extract global trackers from `createTorrent.announceList`
 const globalTrackers = createTorrent.announceList
