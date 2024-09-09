@@ -1,0 +1,26 @@
+{
+  "name": "tracker",
+  "version": "1.0.0",
+  "description": "A BitTorrent tracker server implemented with bittorrent-tracker",
+  "main": "tracker.js",
+  "type": "module",
+  "scripts": {
+    "start": "node tracker.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "torrent",
+    "tracker",
+    "bittorrent"
+  ],
+  "author": "Akash",
+  "license": "ISC",
+  "dependencies": {
+    "bittorrent-tracker": "^11.1.2",
+    "tracker": "file:"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}
