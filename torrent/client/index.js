@@ -1,30 +1,3 @@
-// Define WebRTC configuration function
-const getRtcConfig = (cb) => {
-  // Hardcoded WebRTC configuration
-  const rtcConfig = {
-    iceServers: [
-      // STUN Servers
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' },
-      { urls: 'stun:stun.services.mozilla.com' },
-      { urls: 'stun:stun.ekiga.net' },
-
-      // TURN Servers (no authentication)
-      { urls: 'turn:turn.anyfirewall.com:443?transport=udp' },
-      { urls: 'turn:turn.anyfirewall.com:443?transport=tcp' }
-    ],
-    sdpSemantics: 'unified-plan',
-    bundlePolicy: 'max-bundle',
-    iceCandidatePoolSize: 10
-  };
-  
-  cb(null, rtcConfig);
-};
-
 // Import necessary modules and libraries
 const createTorrent = require('create-torrent');
 const dragDrop = require('drag-drop');
@@ -42,47 +15,55 @@ const SimplePeer = require('simple-peer');
 const util = require('./util');
 const debug = require('debug');
 
+// Define WebRTC configuration
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'stun:stun.services.mozilla.com' },
+    { urls: 'stun:stun.ekiga.net' },
+    { urls: 'turn:turn.anyfirewall.com:443?transport=udp' },
+    { urls: 'turn:turn.anyfirewall.com:443?transport=tcp' }
+  ],
+  sdpSemantics: 'unified-plan',
+  bundlePolicy: 'max-bundle',
+  iceCandidatePoolSize: 20
+};
 
-// Define your custom torrent tracker
-const customTracker = 'wss://torrent.fastsharetorrent.me ';
+// Define custom torrent tracker
+const customTracker = 'wss://torrent.fastsharetorrent.me';
 
 // Extract global trackers from `createTorrent.announceList`
 const globalTrackers = createTorrent.announceList
-  .map(arr => arr[0])  // Extract URLs from the announce list
-  .filter(url => url.startsWith('wss://') || url.startsWith('ws://'));  // Filter for WebSocket URLs
+  .map(arr => arr[0])
+  .filter(url => url.startsWith('wss://') || url.startsWith('ws://'));
 
 // Set the `WEBTORRENT_ANNOUNCE` array to use the custom tracker first, then the global trackers
 globalThis.WEBTORRENT_ANNOUNCE = [customTracker, ...globalTrackers];
 
-
 // Create WebTorrent client
 const getClient = thunky(function (cb) {
-  getRtcConfig(function (err, rtcConfig) {
-    if (err) util.error(err);
-    const client = new WebTorrent({
-      tracker: {
-        rtcConfig: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' }
-          ],
-          sdpSemantics: 'unified-plan',
-          bundlePolicy: 'max-bundle',
-          iceCandidatePoolSize: 20,
-        }
-      },
-      dht: true, // Enable DHT for better peer discovery
-      utp: true, // Enable uTP for efficient bandwidth usage
-      maxConnections: 200, // Increase connections limit
-      uploads: {
-        maxUploadSpeed: 0, // Unlimited upload speed
-        maxDownloadSpeed: 0 // Unlimited download speed
-      }
-    });
-    window.client = client;
-    client.on('warning', util.warning);
-    client.on('error', util.error);
-    cb(null, client);
+  const client = new WebTorrent({
+    tracker: {
+      rtcConfig
+    },
+    dht: true,
+    utp: true,
+    maxConnections: 200,
+    uploads: {
+      maxUploadSpeed: 0,
+      maxDownloadSpeed: 0
+    }
   });
+
+  window.client = client;
+  client.on('warning', util.warning);
+  client.on('error', util.error);
+  cb(null, client);
 });
 
 // Initialize the application
