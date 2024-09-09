@@ -35,6 +35,9 @@ const rtcConfig = {
 
 globalThis.WEBTORRENT_ANNOUNCE = [
   'wss://tracker.fastsharetorrent.me',
+  'wss://tracker.files.fm:7073/announce',
+  'ws://tracker.files.fm:7072/announce',
+  'wss://tracker.webtorrent.dev'
 ];
 
 // Create WebTorrent client
