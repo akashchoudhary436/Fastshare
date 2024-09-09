@@ -25,9 +25,7 @@ const rtcConfig = {
     { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
     { urls: 'stun:stun.services.mozilla.com' },
-    { urls: 'stun:stun.ekiga.net' },
-    { urls: 'turn:turn.anyfirewall.com:443?transport=udp' },
-    { urls: 'turn:turn.anyfirewall.com:443?transport=tcp' }
+    { urls: 'stun:stun.ekiga.net' }
   ],
   sdpSemantics: 'unified-plan',
   bundlePolicy: 'max-bundle',
