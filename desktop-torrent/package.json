@@ -1,0 +1,40 @@
+{
+  "name": "fastshare",
+  "version": "1.0.0",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^26.6.10",
+    "electron-builder": "^25.0.5"
+  },
+  "build": {
+    "asar": false,
+    "appId": "com.fastshare.app",
+    "productName": "FastShare",
+    "files": [
+      "dist/**/*",
+      "src/**/*",
+      "index.html",
+      "assets/**/*",
+      "node_modules/webtorrent/**/*",
+      "!**/node_modules/.bin",
+      "!**/node_modules/**/*.md",
+      "!**/node_modules/**/test",
+      "!**/node_modules/**/docs",
+      "!**/node_modules/webtorrent/node_modules"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "icon": "assets/icon.ico"
+    }
+  },
+  "dependencies": {
+    "fastshare": "file:",
+    "webtorrent": "^2.5.1"
+  }
+}

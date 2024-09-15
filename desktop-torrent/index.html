@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FastShare - File Seeding</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f9;
+      color: #333;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      color: #4a90e2;
+      margin-bottom: 20px;
+    }
+
+    .button-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    button:hover {
+      background-color: #357abd;
+      transform: scale(1.05);
+    }
+
+    #filePath, #infoHash {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #555;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    #filePath {
+      background-color: #e0e0e0;
+    }
+
+    #infoHash {
+      background-color: #fff;
+      border: 2px solid #4a90e2;
+      font-weight: bold;
+    }
+
+    #progress {
+      margin-top: 20px;
+      position: relative;
+      background: #e0e0e0;
+      width: 100%;
+      max-width: 500px;
+      height: 25px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: #50e3c2;
+      border-radius: 5px;
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .animated-text {
+      animation: fadeIn 1s ease-in-out;
+    }
+
+
+  </style>
+</head>
+<body>
+  <h1>FastShare</h1>
+  <div class="button-container">
+    <button id="openFileButton">Open File</button>
+    <button id="seedFileButton">Seed File</button>
+  </div>
+  <p id="filePath" class="animated-text">No file selected</p>
+  <p id="infoHash" class="animated-text">Info Hash:</p>
+  <div id="progress" class="animated-text">
+    <div class="progress-bar" id="progressBar">0%</div>
+  </div>
+
+  <script>
+    let selectedFilePath = null;
+
+    document.getElementById('openFileButton').addEventListener('click', async () => {
+      try {
+        const filePaths = await window.api.openFileDialog();
+        if (filePaths.length > 0) {
+          selectedFilePath = filePaths[0];
+          document.getElementById('filePath').textContent = `File Path: ${selectedFilePath}`;
+        } else {
+          document.getElementById('filePath').textContent = 'No file selected';
+        }
+      } catch (error) {
+        console.error('Error opening file:', error);
+      }
+    });
+
+    document.getElementById('seedFileButton').addEventListener('click', async () => {
+      if (!selectedFilePath) {
+        document.getElementById('filePath').textContent = 'No file selected';
+        return;
+      }
+
+      try {
+        const { infoHash } = await window.api.seedFile(selectedFilePath);
+        document.getElementById('infoHash').textContent = `${infoHash}`;
+      } catch (error) {
+        console.error('Error seeding file:', error);
+      }
+    });
+
+    // Listen for progress updates from the main process
+    window.api.onFileReadProgress((event, progress) => {
+      const progressBar = document.getElementById('progressBar');
+      progressBar.style.width = `${progress}%`;
+      progressBar.textContent = `${progress}%`;
+    });
+  </script>
+</body>
+</html>
