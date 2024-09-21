@@ -4,7 +4,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'; // Use Routes instead of Switch
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
-
+import "./App.css";
 import Home from "./components/Home";
 import About from "./components/About";
 import About2 from "./components/About2";
