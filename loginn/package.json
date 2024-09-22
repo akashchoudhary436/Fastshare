@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "backendd": "file:",
     "connect-mongo": "^5.1.0",
     "express": "^4.19.2",
     "express-async-handler": "^1.2.0",
