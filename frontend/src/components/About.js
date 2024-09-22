@@ -1,7 +1,7 @@
 import React from "react";
 import AboutBackground from "../Assets/about-background.png";
 import p2p from "../Assets/p2p.png";
-
+import { Link } from "react-router-dom";
 
 const About = () => {
   return (
@@ -14,21 +14,23 @@ const About = () => {
       </div>
       <div className="about-section-text-container">
         <p className="primary-subheading">About</p>
-        <h1 className="primary-heading">
-          P2P Transfer
-        </h1>
+        <h1 className="primary-heading">P2P Transfer</h1>
         <p className="primary-text">
-        Share files directly between devices without intermediaries. 
+          Share files directly between devices without intermediaries. 
         </p>
         <p className="primary-text">
-        Experience fast, secure transfers with no data limits 
-        or third-party involvement.
+          Experience fast, secure transfers with no data limits 
+          or third-party involvement.
         </p>
         <div className="about-buttons-container">
-          <button className="secondary-button">Learn More</button>
-        {/*<button className="watch-video-button">
+          <Link to="/sender" className="secondary-button">
+            Learn More
+          </Link>
+          {/* 
+          <button className="watch-video-button">
             <BsFillPlayCircleFill /> Watch Video
-          </button>*/ }  
+          </button>
+          */}
         </div>
       </div>
     </div>
