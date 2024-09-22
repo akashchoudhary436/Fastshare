@@ -1,46 +1,62 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { useParams } from 'react-router-dom';
-import JSZip from 'jszip';
 
-const socket = io('http://localhost:3001');
+const socket = io('http://localhost:3001'); // Connect to the server
 
 function P2pReceiver() {
-  const { roomId } = useParams();
-  const [receivedFile, setReceivedFile] = useState(null);
-  const [folderName, setFolderName] = useState('');
-  const [progress, setProgress] = useState(0);
-  const peerConnection = useRef(null);
-  const receivedChunks = useRef({});
-  const [fileReceived, setFileReceived] = useState(false);
-  const totalReceived = useRef(0);
-  const totalFileSize = useRef(0);
+  const { roomId } = useParams(); // Extract roomId from URL
+  const [receivedFile, setReceivedFile] = useState(null); // Received file state
+  const [progress, setProgress] = useState(0); // Progress state
+  const peerConnection = useRef(null); // RTCPeerConnection instance
+  const receivedChunks = useRef([]); // Array to store file chunks
+  const [fileReceived, setFileReceived] = useState(false); // To indicate file reception
+  const totalReceived = useRef(0); // Use useRef for totalReceived
 
   useEffect(() => {
     peerConnection.current = new RTCPeerConnection();
 
+    // Handle incoming data channels
     peerConnection.current.ondatachannel = (event) => {
       const receiveChannel = event.channel;
+      let fileSize;
+      let fileName;
 
       receiveChannel.onopen = () => {
-        console.log('Data channel is open');
+        console.log('Data channel is open, ready to receive file');
       };
 
       receiveChannel.onmessage = (event) => {
-        try {
-          if (typeof event.data === 'string') {
+        if (typeof event.data === 'string') {
+          // Handle metadata first
+          try {
+            const metadata = JSON.parse(event.data);
+            if (metadata.fileName && metadata.fileSize) {
+              fileName = metadata.fileName; // Set the received file name
+              fileSize = metadata.fileSize; // Set the file size
+              console.log(`Receiving file: ${fileName}, Size: ${fileSize}`);
+            }
+          } catch (error) {
             if (event.data === 'EOF') {
               console.log('End of file transfer');
-              reassembleFiles();
-            } else {
-              handleMetadata(event.data); // Handle metadata separately
+              const blob = new Blob(receivedChunks.current); // Reassemble file from chunks
+              const fileUrl = URL.createObjectURL(blob);
+              setReceivedFile({ fileName, fileUrl });
+              setFileReceived(true);
             }
-          } else if (event.data instanceof ArrayBuffer) {
-            handleChunk(event.data); // Handle chunk separately
           }
-        } catch (error) {
-          console.error("Error processing message:", error);
+        } else if (event.data instanceof ArrayBuffer) {
+          receivedChunks.current.push(event.data);
+          totalReceived.current += event.data.byteLength; // Update ref for totalReceived
+      
+          // Update progress bar
+          const progress = Math.floor((totalReceived.current / fileSize) * 100);
+          setProgress(progress);
         }
+      };
+
+      receiveChannel.onclose = () => {
+        console.log('Data channel is closed');
       };
     };
 
@@ -69,7 +85,7 @@ function P2pReceiver() {
       try {
         await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (error) {
-        console.error('Error adding received ice candidate:', error);
+        console.error('Error adding ICE candidate', error);
       }
     });
 
@@ -80,86 +96,21 @@ function P2pReceiver() {
     };
   }, [roomId]);
 
-  // Handle metadata received from sender
-  const handleMetadata = (data) => {
-    try {
-      const metadata = JSON.parse(data);
-      
-      if (metadata.folderName) setFolderName(metadata.folderName);
-
-      if (metadata.fileName && metadata.fileSize) {
-        receivedChunks.current[metadata.relativePath] ||= [];
-        totalFileSize.current += metadata.fileSize;
-      }
-      
-     } catch(error){
-       console.error("Error parsing metadata:", error);
-     }
-   }
-
-   // Handle chunk received from sender
-   const handleChunk= (chunk)=>{
-     try{
-       const filePath= Object.keys(receivedChunks.current).slice(-1)[0];
-       receivedChunks.current[filePath].push(chunk);
-       totalReceived.current += chunk.byteLength;
-
-       // Update progress state
-       setProgress(Math.floor((totalReceived.current / totalFileSize.current) * 100));
-
-     }catch(error){
-       console.error("Error handling chunk:", error)
-     }
-   }
-
-   // Reassemble files after receiving all chunks
-   const reassembleFiles= ()=>{
-     try{
-       const zip= new JSZip();
-
-       Object.entries(receivedChunks.current).forEach(([filePath,chunks])=>{
-         let combinedArrayBuffer= new Uint8Array(totalFileSize.current);
-         let offset=0;
-
-         chunks.forEach(chunk=>{
-           combinedArrayBuffer.set(new Uint8Array(chunk), offset)
-           offset+= chunk.byteLength;
-         });
-
-         zip.file(filePath,new Blob([combinedArrayBuffer]));
-       });
-
-       zip.generateAsync({type:'blob'}).then(content=>{
-         let downloadLink= URL.createObjectURL(content)
-         setReceivedFile({fileName:`${folderName || 'received_files'}.zip`,fileUrl:downloadLink});
-         setFileReceived(true)
-       })
-
-     }catch(error){
-       console.error("Error reassembling files:", error)
-     }
-   }
-
-   return (
-     <div>
-       <h1>Receiver</h1>
-       {fileReceived ? (
-         <div>
-           <h2>Received File</h2>
-           <a href={receivedFile.fileUrl} download={receivedFile.fileName}>
-             Download {receivedFile.fileName}
-           </a>
-         </div>
-       ) : (
-         <div>
-           <p>Waiting for file...</p>
-           <progress value={progress} max="100">
-             {progress}%
-           </progress>
-         </div>
-       )}
-     </div>
-   );
+  return (
+    <div>
+      <h1>Receiver</h1>
+      {fileReceived ? (
+        <div>
+          <h2>Received File</h2>
+          <a href={receivedFile.fileUrl} download={receivedFile.fileName}>
+            Download File
+          </a>
+        </div>
+      ) : (
+        <progress value={progress} max="100">{progress}%</progress>
+      )}
+    </div>
+  );
 }
 
 export default P2pReceiver;
