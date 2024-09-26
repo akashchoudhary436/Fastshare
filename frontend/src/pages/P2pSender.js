@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import io from 'socket.io-client';
+
 import { v4 as uuidv4 } from 'uuid'; // For generating unique room IDs
 
 const socket = io('http://localhost:3001'); // Connect to the server
@@ -33,6 +34,7 @@ function P2pSender() {
       } catch (error) {
         console.error('Error setting remote description:', error);
       }
+
     });
 
     return () => {
@@ -40,6 +42,7 @@ function P2pSender() {
       socket.off('webrtc-answer');
     };
   }, []);
+
 
   // Create a room and generate receiver link
   const createRoom = () => {
@@ -60,11 +63,13 @@ function P2pSender() {
 
     setFileTransferStarted(true);
     peerConnection.current = new RTCPeerConnection();
+
     peerConnection.current.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', { candidate: event.candidate, roomId });
       }
     };
+
 
     // Create DataChannel for file transfer
     dataChannelRef.current = peerConnection.current.createDataChannel('fileTransfer');
@@ -103,6 +108,7 @@ function P2pSender() {
     };
 
     // Create WebRTC offer and set local description
+
     try {
       const offer = await peerConnection.current.createOffer();
       await peerConnection.current.setLocalDescription(offer);
@@ -124,7 +130,9 @@ function P2pSender() {
           </a>
         </div>
       )}
+
       <input type="file" onChange={handleFileSelect} />
+
       <button onClick={sendFile} disabled={fileTransferStarted}>
         {fileTransferStarted ? 'File Transfer Started' : 'Start File Transfer'}
       </button>

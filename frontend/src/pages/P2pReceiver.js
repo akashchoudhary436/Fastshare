@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { useParams } from 'react-router-dom';
 
+
 const socket = io('http://localhost:3001'); // Connect to the server
 
 function P2pReceiver() {
@@ -13,8 +14,10 @@ function P2pReceiver() {
   const [fileReceived, setFileReceived] = useState(false); // To indicate file reception
   const totalReceived = useRef(0); // Use useRef for totalReceived
 
+
   useEffect(() => {
     peerConnection.current = new RTCPeerConnection();
+
 
     // Handle incoming data channels
     peerConnection.current.ondatachannel = (event) => {
@@ -58,6 +61,7 @@ function P2pReceiver() {
       receiveChannel.onclose = () => {
         console.log('Data channel is closed');
       };
+
     };
 
     peerConnection.current.onicecandidate = (event) => {
@@ -85,7 +89,9 @@ function P2pReceiver() {
       try {
         await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (error) {
+
         console.error('Error adding ICE candidate', error);
+
       }
     });
 
@@ -111,6 +117,7 @@ function P2pReceiver() {
       )}
     </div>
   );
+
 }
 
 export default P2pReceiver;
