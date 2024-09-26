@@ -1,32 +1,40 @@
 import React, { useRef, useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import { v4 as uuidv4 } from 'uuid';
 
-const socket = io('http://localhost:3001');
+import { v4 as uuidv4 } from 'uuid'; // For generating unique room IDs
+
+const socket = io('http://localhost:3001'); // Connect to the server
 
 function P2pSender() {
-  const [files, setFiles] = useState([]);
-  const [roomId, setRoomId] = useState('');
-  const [receiverLink, setReceiverLink] = useState('');
-  const [fileTransferStarted, setFileTransferStarted] = useState(false);
-  const [folderName, setFolderName] = useState('');
-  const [progress, setProgress] = useState(0);
-  const peerConnection = useRef(null);
-  const dataChannelRef = useRef(null);
-  
-  const CHUNK_SIZE = 16384; // Size of each chunk
-  const BUFFER_THRESHOLD = 65536; // Buffer threshold
+  const [file, setFile] = useState(null); // Selected file
+  const [roomId, setRoomId] = useState(''); // Unique room ID
+  const [receiverLink, setReceiverLink] = useState(''); // Receiver URL
+  const [fileTransferStarted, setFileTransferStarted] = useState(false); // Prevent multiple transfers
+  const [progress, setProgress] = useState(0); // Progress state
+  const peerConnection = useRef(null); // RTCPeerConnection instance
+  const dataChannelRef = useRef(null); // RTCDataChannel instance
 
   useEffect(() => {
+    // Listen for ICE candidates from Receiver
     socket.on('ice-candidate', async ({ candidate }) => {
       if (peerConnection.current && candidate) {
-        await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+        try {
+          await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (error) {
+          console.error('Error adding received ICE candidate', error);
+        }
       }
     });
 
+    // Listen for WebRTC answer from Receiver
     socket.on('webrtc-answer', async ({ answer }) => {
       if (!peerConnection.current) return;
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+      try {
+        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (error) {
+        console.error('Error setting remote description:', error);
+      }
+
     });
 
     return () => {
@@ -35,28 +43,23 @@ function P2pSender() {
     };
   }, []);
 
+
+  // Create a room and generate receiver link
   const createRoom = () => {
-    const newRoomId = uuidv4();
+    const newRoomId = uuidv4(); // Generate unique room ID
     setRoomId(newRoomId);
-    setReceiverLink(`http://localhost:3000/receiver/${newRoomId}`);
-    socket.emit('join-room', newRoomId);
+    setReceiverLink(`http://localhost:3000/receiver/${newRoomId}`); // Generate receiver link
+    socket.emit('join-room', newRoomId); // Join the room
   };
 
+  // Handle file selection
   const handleFileSelect = (event) => {
-    const selectedFiles = Array.from(event.target.files).map(file => ({
-      file,
-      relativePath: file.webkitRelativePath || file.name
-    }));
-
-    // Capture the folder name (if available)
-    const folderPath = selectedFiles[0].relativePath.split('/')[0];
-    setFolderName(folderPath);
-
-    setFiles(selectedFiles);
+    setFile(event.target.files[0]);
   };
 
+  // Initiate file transfer
   const sendFile = async () => {
-    if (files.length === 0) return;
+    if (!file) return;
 
     setFileTransferStarted(true);
     peerConnection.current = new RTCPeerConnection();
@@ -67,55 +70,44 @@ function P2pSender() {
       }
     };
 
+
+    // Create DataChannel for file transfer
     dataChannelRef.current = peerConnection.current.createDataChannel('fileTransfer');
-    dataChannelRef.current.binaryType = 'arraybuffer';
-
     dataChannelRef.current.onopen = () => {
-      // Send folder name first
-      dataChannelRef.current.send(JSON.stringify({ folderName }));
+      const CHUNK_SIZE = 16384; // 16KB per chunk
+      const reader = new FileReader();
+      let offset = 0;
 
-      files.forEach(({ file, relativePath }) => {
-        const metadata = JSON.stringify({
-          fileName: file.name,
-          fileSize: file.size,
-          relativePath,
-        });
-
-        dataChannelRef.current.send(metadata);
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const arrayBuffer = e.target.result;
-          let offset = 0;
-
-          const sendChunk = () => {
-            while (offset < arrayBuffer.byteLength) {
-              if (dataChannelRef.current.bufferedAmount > BUFFER_THRESHOLD) {
-                dataChannelRef.current.onbufferedamountlow = sendChunk;
-                return;
-              }
-
-              const chunk = arrayBuffer.slice(offset, offset + CHUNK_SIZE);
-              dataChannelRef.current.send(chunk);
-              offset += CHUNK_SIZE;
-              setProgress(Math.floor((offset / file.size) * 100));
-            }
-
-            if (offset >= arrayBuffer.byteLength) {
-              dataChannelRef.current.send('EOF');
-            }
-          };
-
-          sendChunk();
-        };
-
-        reader.onerror = (error) => {
-          console.error("Error reading file:", error);
-        };
-
-        reader.readAsArrayBuffer(file);
+      // Send file metadata
+      const metadata = JSON.stringify({
+        fileName: file.name,
+        fileSize: file.size,
       });
+      dataChannelRef.current.send(metadata); // Send metadata first
+
+      reader.onload = (e) => {
+        const arrayBuffer = e.target.result;
+        const fileSize = file.size;
+
+        // Send file chunks
+        while (offset < fileSize) {
+          const chunk = arrayBuffer.slice(offset, offset + CHUNK_SIZE);
+          dataChannelRef.current.send(chunk);
+          offset += CHUNK_SIZE;
+
+          // Update progress bar
+          const progress = Math.floor((offset / fileSize) * 100);
+          setProgress(progress);
+        }
+
+        // Send EOF signal
+        dataChannelRef.current.send('EOF');
+      };
+
+      reader.readAsArrayBuffer(file); // Read the file as ArrayBuffer
     };
+
+    // Create WebRTC offer and set local description
 
     try {
       const offer = await peerConnection.current.createOffer();
@@ -138,7 +130,9 @@ function P2pSender() {
           </a>
         </div>
       )}
-      <input type="file" onChange={handleFileSelect} multiple webkitdirectory="true" />
+
+      <input type="file" onChange={handleFileSelect} />
+
       <button onClick={sendFile} disabled={fileTransferStarted}>
         {fileTransferStarted ? 'File Transfer Started' : 'Start File Transfer'}
       </button>
