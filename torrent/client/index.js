@@ -32,7 +32,7 @@ const rtcConfig = {
   iceCandidatePoolSize: 20
 };
 
-
+//Torrent Tracker
 globalThis.WEBTORRENT_ANNOUNCE = [
   'wss://tracker.fastsharetorrent.me',
   'wss://tracker.files.fm:7073/announce',
@@ -159,15 +159,14 @@ function downloadTorrentFile(file) {
 // Seed files
 function seed(files) {
   if (files.length === 0) return;
-
-
-  // Seed from WebTorrent
   getClient((err, client) => {
     if (err) return util.error(err);
     client.seed(files, onTorrent);
   });
 }
-// Inject CSS styles into the document
+
+
+
 // Inject CSS styles into the document
 const style = document.createElement('style');
 style.textContent = `

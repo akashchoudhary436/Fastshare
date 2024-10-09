@@ -14,6 +14,7 @@ import HomeIcon from "@mui/icons-material/Home";
 import InfoIcon from "@mui/icons-material/Info";
 import CommentRoundedIcon from "@mui/icons-material/CommentRounded";
 import PhoneRoundedIcon from "@mui/icons-material/PhoneRounded";
+import { Link } from "react-router-dom";
 
 
 const Navbar = () => {
@@ -46,8 +47,8 @@ const Navbar = () => {
         <a href="">About</a>
         <a href="">Testimonials</a>
         <a href="">Contact</a>  
-        <button className="primary-button">Sign up</button> 
-        <button className="primary-button">Login</button>  
+        <Link to={'/signup'} className="primary-button">Sign up</Link> 
+        <Link to={'/login'} className="primary-button">Login</Link>  
       </div>
       <div className="navbar-menu-container">
 
