@@ -1,22 +1,29 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import '../styles/LandingPage.css'; // Import any specific styles
+import Home from "../components/Home";
+import About from "../components/About";
+import About2 from "../components/About2";
+import About3 from "../components/About3";
+import Work from "../components/Work";
+import Testimonials from "../components/Testimolnials";
+import Contact from "../components/Contact";
+import Footer from "../components/Footer";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import "../styles/LandingPage.css"
 
 const LandingPage = () => {
   return (
-    <div className="landing-container">
-      <header className="landing-header">
-        <h1>Welcome to FastShare</h1>
-        <p>Your solution for secure and efficient file sharing.</p>
-      </header>
-      <main className="landing-main">
-        <Link to="/login" className="btn btn-primary">
-          Login
-        </Link>
-       
-      </main>
-    </div>
+    <div>
+      <Home />
+      <About />
+      <About2 />
+      <About3 />
+      <Work />
+      <Testimonials />
+      <Contact />
+      <Footer />
+    </div>  
   );
 };
 
