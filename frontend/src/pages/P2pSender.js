@@ -1,9 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-
 import { v4 as uuidv4 } from 'uuid'; // For generating unique room IDs
 
 const socket = io('http://localhost:3001'); // Connect to the server
+const NUMBER_OF_CHANNELS = 4; // Number of data channels to create
 
 function P2pSender() {
   const [file, setFile] = useState(null); // Selected file
@@ -12,7 +12,11 @@ function P2pSender() {
   const [fileTransferStarted, setFileTransferStarted] = useState(false); // Prevent multiple transfers
   const [progress, setProgress] = useState(0); // Progress state
   const peerConnection = useRef(null); // RTCPeerConnection instance
-  const dataChannelRef = useRef(null); // RTCDataChannel instance
+  const dataChannels = useRef([]); // Array of RTCDataChannel instances
+  const totalChunks = useRef(0); // Total number of chunks
+  const chunksSent = useRef(0); // Number of chunks sent
+  const pendingChunks = useRef([]); // Chunks to be sent
+  const channelIndex = useRef(0); // Current channel index for sending
 
   useEffect(() => {
     // Listen for ICE candidates from Receiver
@@ -34,7 +38,6 @@ function P2pSender() {
       } catch (error) {
         console.error('Error setting remote description:', error);
       }
-
     });
 
     return () => {
@@ -42,7 +45,6 @@ function P2pSender() {
       socket.off('webrtc-answer');
     };
   }, []);
-
 
   // Create a room and generate receiver link
   const createRoom = () => {
@@ -70,45 +72,28 @@ function P2pSender() {
       }
     };
 
+    // Create multiple DataChannels for file transfer
+    for (let i = 0; i < NUMBER_OF_CHANNELS; i++) {
+      const dataChannel = peerConnection.current.createDataChannel(`fileTransfer${i}`);
+      dataChannels.current.push(dataChannel);
 
-    // Create DataChannel for file transfer
-    dataChannelRef.current = peerConnection.current.createDataChannel('fileTransfer');
-    dataChannelRef.current.onopen = () => {
-      const CHUNK_SIZE = 16384; // 16KB per chunk
-      const reader = new FileReader();
-      let offset = 0;
-
-      // Send file metadata
-      const metadata = JSON.stringify({
-        fileName: file.name,
-        fileSize: file.size,
-      });
-      dataChannelRef.current.send(metadata); // Send metadata first
-
-      reader.onload = (e) => {
-        const arrayBuffer = e.target.result;
-        const fileSize = file.size;
-
-        // Send file chunks
-        while (offset < fileSize) {
-          const chunk = arrayBuffer.slice(offset, offset + CHUNK_SIZE);
-          dataChannelRef.current.send(chunk);
-          offset += CHUNK_SIZE;
-
-          // Update progress bar
-          const progress = Math.floor((offset / fileSize) * 100);
-          setProgress(progress);
+      dataChannel.onopen = () => {
+        console.log(`Data channel ${i} is open, ready to send file`);
+        if (i === 0) {
+          // Start sending file chunks when the first channel is open
+          sendFileChunks();
         }
-
-        // Send EOF signal
-        dataChannelRef.current.send('EOF');
       };
 
-      reader.readAsArrayBuffer(file); // Read the file as ArrayBuffer
-    };
+      dataChannel.onmessage = (event) => {
+        if (event.data === 'ACK') {
+          // Acknowledgment received, send the next chunk
+          sendNextChunk();
+        }
+      };
+    }
 
     // Create WebRTC offer and set local description
-
     try {
       const offer = await peerConnection.current.createOffer();
       await peerConnection.current.setLocalDescription(offer);
@@ -116,6 +101,52 @@ function P2pSender() {
     } catch (error) {
       console.error('Error creating or sending offer:', error);
     }
+  };
+
+  const sendFileChunks = () => {
+    const CHUNK_SIZE = 16384; // 16KB per chunk
+    const reader = new FileReader();
+    let offset = 0; // Offset for reading
+    totalChunks.current = Math.ceil(file.size / CHUNK_SIZE); // Calculate total number of chunks
+
+    reader.onload = (e) => {
+      const arrayBuffer = e.target.result;
+
+      // Fill pendingChunks with all chunks
+      while (offset < arrayBuffer.byteLength) {
+        const chunk = arrayBuffer.slice(offset, Math.min(offset + CHUNK_SIZE, arrayBuffer.byteLength));
+        pendingChunks.current.push(chunk);
+        offset += CHUNK_SIZE;
+      }
+
+      // Start sending the first chunk
+      sendNextChunk();
+    };
+
+    reader.readAsArrayBuffer(file); // Read the file as ArrayBuffer
+  };
+
+  const sendNextChunk = () => {
+    if (pendingChunks.current.length === 0) {
+      // If all chunks have been sent, send EOF signal on the last channel
+      const lastChannel = dataChannels.current[channelIndex.current];
+      lastChannel.send('EOF');
+      return;
+    }
+
+    const chunk = pendingChunks.current.shift(); // Get the next chunk
+    const currentChannel = dataChannels.current[channelIndex.current];
+
+    currentChannel.send(chunk); // Send the chunk
+    console.log(`Sending chunk to channel ${channelIndex.current}`);
+
+    // Update progress
+    chunksSent.current++;
+    const progress = Math.floor((chunksSent.current / totalChunks.current) * 100);
+    setProgress(progress);
+
+    // Move to the next channel in round-robin fashion
+    channelIndex.current = (channelIndex.current + 1) % NUMBER_OF_CHANNELS;
   };
 
   return (
