@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
-import './cloudupload.css'; 
+// import './cloudupload.css'; 
 
 const CloudUpload = () => {
   const [file, setFile] = useState(null);
