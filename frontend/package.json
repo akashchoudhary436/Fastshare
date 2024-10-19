@@ -12,10 +12,7 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.7",
-<<<<<<< HEAD
-=======
     "buffer": "^6.0.3",
->>>>>>> 28eb1dcd710a81f2134e12c28d538bbeb64c2c6f
     "frontend": "file:",
     "jszip": "^3.10.1",
     "process": "^0.11.10",
