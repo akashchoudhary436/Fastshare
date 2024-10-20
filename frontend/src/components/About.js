@@ -5,7 +5,9 @@ import { Link } from "react-router-dom";
 
 const About = () => {
   return (
-    <div className="about-section-container">
+    
+    <div className="about-section-container" id="about">
+      
       <div className="about-background-image-container">
         <img src={AboutBackground} alt="" />
       </div>
@@ -33,7 +35,9 @@ const About = () => {
           */}
         </div>
       </div>
+     
     </div>
+   
   );
 };
 

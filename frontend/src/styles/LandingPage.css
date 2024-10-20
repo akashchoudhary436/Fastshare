@@ -70,6 +70,7 @@ nav {
   position: relative;
   display: flex;
   padding-top: 3rem;
+  margin-left: 3rem;
 }
 .home-bannerImage-container {
   position: absolute;
@@ -137,6 +138,7 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-left: 3rem;
 }
 .about-background-image-container {
   position: absolute;
