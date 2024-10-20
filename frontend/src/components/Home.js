@@ -1,14 +1,15 @@
 import React from "react";
 import BannerBackground from "../Assets/home-banner-background.png";
-
 import hb1 from "../Assets/hb1.png";
 import Navbar from "./Navbar";
 
 
+
 const Home = () => {
   return (
-    <div className="home-container">
+    <div className="home-container" id="home">
       <Navbar />
+      
       <div className="home-banner-container">
         <div className="home-bannerImage-container">
           <img src={BannerBackground} alt=""  />
