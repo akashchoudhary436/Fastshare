@@ -83,21 +83,29 @@ const authUser = asyncHandler(async (req, res) => {
 });
 
 // Verify OTP for Login
+// Verify OTP for Login
 const verifyLogin = asyncHandler(async (req, res) => {
     const { otp } = req.body;
 
+    // Ensure OTP exists and is a number
+    if (!otp || isNaN(otp)) {
+        return res.status(400).json({ message: "Invalid OTP format" });
+    }
+
+    // Compare OTP and check expiration
     if (parseInt(req.session.otp) === parseInt(otp) && Date.now() < req.session.otpExpires) {
         const user = await Usermodel.findById(req.session.userId);
+        
+        // Clear specific session data without destroying the whole session
+        req.session.otp = null;
+        req.session.otpExpires = null;
+        req.session.userId = null;
 
-        // Clear session data
-        req.session.destroy();
-
+        // Return user data and token
         res.json({
             _id: user._id,
             name: user.name,
-            
             email: user.email,
-   
             token: generateToken(user._id),
         });
     } else if (Date.now() >= req.session.otpExpires) {
@@ -106,5 +114,6 @@ const verifyLogin = asyncHandler(async (req, res) => {
         res.status(400).json({ message: "Invalid OTP" });
     }
 });
+
 
 module.exports = { registerUser, verifyUser, authUser, verifyLogin };
