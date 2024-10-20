@@ -2,34 +2,37 @@ import React from 'react';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import sejal from "../Assets/sejal_photo.jpeg"
+import Roshani from "../Assets/roshani_photo.jpeg"
+
 
 const testimonials = [
   {
     id: 1,
-    name: "John Doe",
-    image: "https://i.pinimg.com/736x/3d/96/eb/3d96eba59a324ac1570e174fd5bb5e94.jpg",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    name: "Sejal Ingale",
+    image: sejal,
+    text: "A very good platform to find all services in one place",
     rating: 5,
   },
   {
     id: 2,
-    name: "Jane Smith",
+    name: "Akash Choudhary",
     image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5Q1ntVhsGAubjlUXlkUfQGhLOj0Q2tCD7DQ&s",
-    text: "Proin gravida nibh vel velit auctor aliquet.",
+    text: "Seamless sharing experience, awesome!",
     rating: 5,
   },
   {
     id: 3,
-    name: "Mary Johnson",
-    image: "https://i.pinimg.com/736x/9c/0c/04/9c0c0433aeeab0b6227da3b4a1f28258.jpg",
-    text: "Curabitur blandit tempus porttitor.",
+    name: "Roshani Dubey",
+    image: Roshani,
+    text: "Easy sharing with intutive UI",
     rating: 5,
   },
   {
     id: 4,
-    name: "James Lee",
+    name: "Abhishek Bharambe",
     image: "https://static.tvtropes.org/pmwiki/pub/images/hiroshi_nohara.png",
-    text: "Vivamus sagittis lacus vel augue laoreet rutrum.",
+    text: "Cool got everything on this one platform !",
     rating: 5,
   },
 ];
@@ -47,7 +50,7 @@ const TestimonialSlider = () => {
   };
 
   return (
-    <div className="testimonial-slider" style={{ width: '80%', margin: '0 auto', textAlign: 'center' }}>
+    <div className="testimonial-slider" id="testimonials" style={{ width: '80%', margin: '0 auto', textAlign: 'center' }}>
       <p className="primary-subheading">Testimonial</p>
       <Slider {...settings}>
         {testimonials.map((testimonial) => (
