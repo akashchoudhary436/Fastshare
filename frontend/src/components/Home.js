@@ -19,7 +19,7 @@ const Home = () => {
             Share your files seamlessly
           </h1>
           <p className="primary-text">
-          enables quick file sharing with peer-to-peer transfers, torrent support, and temporary cloud storage for secure data exchange
+          Enables quick file sharing with peer-to-peer transfers, torrent support, and temporary cloud storage for secure data exchange
           </p><div className="btn" style={{display:"flex", justifyContent:"space-between" ,gap: "10px"}} >
           <button className="secondary-button"
           onClick={() => window.location.href = 'https://torrent.fastsharetorrent.me/'}

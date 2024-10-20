@@ -21,8 +21,8 @@ const Footer = () => {
         </div>
         <div className="footer-section-columns">
           <span>222-222-2222</span>
-          <span>fastshare.com</span>
-          <span>press@food.com</span>
+          <span>@fastshare.com</span>
+          <span>@fastshare.com</span>
           <span>@Atharva college</span>
         </div>
         <div className="footer-section-columns">
