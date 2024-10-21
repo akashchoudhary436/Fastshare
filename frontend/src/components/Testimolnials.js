@@ -2,8 +2,10 @@ import React from 'react';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import sejal from "../Assets/sejal_photo.jpeg"
-import Roshani from "../Assets/roshani_photo.jpeg"
+import sejal from "../Assets/sejal_photo.jpeg";
+import Roshani from "../Assets/roshani_photo.jpeg";
+import abhi from "../Assets/abhi_photo.jpeg"
+import akash from "../Assets/akash_photo.jpeg"
 
 
 const testimonials = [
@@ -17,7 +19,7 @@ const testimonials = [
   {
     id: 2,
     name: "Akash Choudhary",
-    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5Q1ntVhsGAubjlUXlkUfQGhLOj0Q2tCD7DQ&s",
+    image: akash,
     text: "Seamless sharing experience, awesome!",
     rating: 5,
   },
@@ -31,7 +33,7 @@ const testimonials = [
   {
     id: 4,
     name: "Abhishek Bharambe",
-    image: "https://static.tvtropes.org/pmwiki/pub/images/hiroshi_nohara.png",
+    image: abhi,
     text: "Cool got everything on this one platform !",
     rating: 5,
   },
@@ -50,7 +52,7 @@ const TestimonialSlider = () => {
   };
 
   return (
-    <div className="testimonial-slider" id="testimonials" style={{ width: '80%', margin: '0 auto', textAlign: 'center' }}>
+    <div className="testimonial-slider" my="2rem" id="testimonials" style={{ width: '80%', margin: '0 auto', textAlign: 'center' }}>
       <p className="primary-subheading">Testimonial</p>
       <Slider {...settings}>
         {testimonials.map((testimonial) => (
