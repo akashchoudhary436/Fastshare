@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
 
-const connectDB = async () =>{
-    try{
-        const conn = await mongoose.connect("mongodb://127.0.0.1:27017/fastshare");
-         console.log(`mongo db connected:${conn.connection.host}`)
-    }catch(error){
-       console.log(`Error:${error.message}`);
-       process.exit();
+const connectDB = async () => {
+    try {
+        const conn = await mongoose.connect("mongodb+srv://akashchoudhary436:OjzGk5PLzQr8Xoyl@cluster0.wstuz.mongodb.net/fastshare?retryWrites=true&w=majority", {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log(`MongoDB connected: ${conn.connection.host}`);
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        process.exit(1); // Exit with failure
     }
 };
 
