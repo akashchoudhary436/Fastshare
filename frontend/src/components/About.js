@@ -1,13 +1,28 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import AboutBackground from "../Assets/about-background.png";
 import p2p from "../Assets/p2p.png";
-import { Link } from "react-router-dom";
+import { Link} from "react-router-dom";
 
 const About = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if the user is logged in
+    const userInfo = localStorage.getItem("userInfo");
+    if (userInfo) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLearnMoreClick = (e) => {
+    if (!isAuthenticated) {
+      e.preventDefault(); // Prevent navigation
+      alert("You need to log in or sign up to access this feature.");
+    }
+  };
+
   return (
-    
     <div className="about-section-container" id="about">
-      
       <div className="about-background-image-container">
         <img src={AboutBackground} alt="" />
       </div>
@@ -25,19 +40,12 @@ const About = () => {
           or third-party involvement.
         </p>
         <div className="about-buttons-container">
-          <Link to="/sender" className="secondary-button">
+          <Link to="https://cloud.fastsharetorrent.me/" className="secondary-button" onClick={handleLearnMoreClick}>
             Learn More
           </Link>
-          {/* 
-          <button className="watch-video-button">
-            <BsFillPlayCircleFill /> Watch Video
-          </button>
-          */}
         </div>
       </div>
-     
     </div>
-   
   );
 };
 

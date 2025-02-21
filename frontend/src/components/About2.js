@@ -1,8 +1,25 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import AboutBackground from "../Assets/about-background.png";
 import p2p from "../Assets/ppp.png";
 
-const About = () => {
+const About2 = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check local storage for user authentication state
+    const userInfo = localStorage.getItem("userInfo");
+    if (userInfo) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLearnMoreClick = (e) => {
+    if (!isAuthenticated) {
+      e.preventDefault(); // Prevent the link from opening
+      alert("You need to log in or sign up to access this feature.");
+    }
+  };
+
   return (
     <div className="about-section-container">
       <div className="about-section-text-container">
@@ -19,14 +36,10 @@ const About = () => {
             className="secondary-button" 
             target="_blank" 
             rel="noopener noreferrer"
+            onClick={handleLearnMoreClick}
           >
             Learn More
           </a>
-          {/* 
-          <button className="watch-video-button">
-            <BsFillPlayCircleFill /> Watch Video
-          </button>
-          */}
         </div>
       </div>
 
@@ -41,4 +54,4 @@ const About = () => {
   );
 };
 
-export default About;
+export default About2;
