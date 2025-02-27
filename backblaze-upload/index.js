@@ -1,18 +1,12 @@
 const express = require("express");
-const path = require("path");
-const multer = require("multer");
 const AWS = require("aws-sdk");
-const fs = require("fs");
-const schedule = require("node-schedule");
 const { v4: uuidv4 } = require("uuid");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
-app.use(express.json());
 app.use(cors());
-app.use(express.static("public"));
-
-const upload = multer({ dest: "uploads/" });
+app.use(express.static("public")); // Static files (error.html, etc.)
 
 // Backblaze B2 S3 Credentials
 const B2_KEY_ID = "0055831ec347a1e0000000002";
@@ -27,111 +21,75 @@ const s3 = new AWS.S3({
   signatureVersion: "v4",
 });
 
-let fileMetadata = {}; // Track file expiration and download limits
+let fileMetadata = {}; // Track metadata like expiry and download limits
 
-// Optimized Multipart Upload Function
-async function uploadFileToS3(filePath, fileName) {
-  const fileSize = fs.statSync(filePath).size;
-  const partSize = 5 * 1024 * 1024; // 50MB per part
-  const numParts = Math.ceil(fileSize / partSize);
-
-  console.log(`🚀 Uploading file in ${numParts} parts (Parallel Mode)...`);
-
-  // Start Multipart Upload
-  const { UploadId } = await s3.createMultipartUpload({
-    Bucket: B2_BUCKET_NAME,
-    Key: fileName,
-  }).promise();
-
-  const fileBuffer = fs.readFileSync(filePath);
-  let uploadPromises = [];
-
-  for (let partNumber = 1; partNumber <= numParts; partNumber++) {
-    const start = (partNumber - 1) * partSize;
-    const end = Math.min(start + partSize, fileSize);
-    const chunk = fileBuffer.slice(start, end);
-
-    // Upload each part asynchronously and store its result
-    uploadPromises.push(
-      s3.uploadPart({
-        Bucket: B2_BUCKET_NAME,
-        Key: fileName,
-        UploadId,
-        PartNumber: partNumber,
-        Body: chunk,
-      }).promise().then((data) => ({
-        ETag: data.ETag,
-        PartNumber: partNumber,
-      }))
-    );
-  }
-
-  // Wait for all parts to upload
-  let uploadedParts = await Promise.all(uploadPromises);
-
-  // ✅ Fix: Ensure parts are sorted before finalizing upload
-  uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber);
-
-  console.log("🔄 Completing multipart upload...");
-  await s3.completeMultipartUpload({
-    Bucket: B2_BUCKET_NAME,
-    Key: fileName,
-    UploadId,
-    MultipartUpload: { Parts: uploadedParts },
-  }).promise();
-
-  console.log("✅ Parallel Multipart Upload Complete!");
-}
-
-
-// Upload File Endpoint
-app.post("/upload", upload.single("file"), async (req, res) => {
+// Upload File (Direct Buffer Upload - No Multer)
+app.post("/upload", async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "❌ No file uploaded!" });
+    const fileName = decodeURIComponent(req.headers['x-file-name']);
+    const days = parseInt(req.headers['x-days'] || '0', 10);
+    const maxDownloads = parseInt(req.headers['x-max-downloads'] || 'Infinity', 10);
 
-    const { days, maxDownloads } = req.body;
-    const filePath = req.file.path;
-    const fileName = req.file.originalname;
-    const fileId = uuidv4();
-    const uniqueDownloadLink = `/download/${fileId}`;
-
-    await uploadFileToS3(filePath, fileName);
-
-    fileMetadata[fileId] = {
-      fileName,
-      maxDownloads: parseInt(maxDownloads) || Infinity,
-      expiryDate: days ? Date.now() + days * 86400000 : null,
-    };
-
-    if (days) {
-      schedule.scheduleJob(new Date(fileMetadata[fileId].expiryDate), async () => {
-        await deleteFile(fileId);
-      });
+    if (!fileName) {
+      return res.status(400).json({ error: "❌ Missing file name!" });
     }
 
-    res.json({
-      message: "✅ File uploaded!",
-      downloadUrl: `http://localhost:3005${uniqueDownloadLink}`,
-      fileId,
+    let fileBuffer = Buffer.alloc(0);
+
+    // Collect file buffer directly from request body
+    req.on('data', (chunk) => {
+      fileBuffer = Buffer.concat([fileBuffer, chunk]);
     });
+
+    req.on('end', async () => {
+      const fileId = uuidv4();
+      const uniqueDownloadLink = `/download/${fileId}`;
+
+      await uploadFileToS3Buffer(fileBuffer, fileName);
+
+      fileMetadata[fileId] = {
+        fileName,
+        maxDownloads,
+        expiryDate: days ? Date.now() + days * 86400000 : null,
+      };
+
+      res.json({
+        message: "✅ File uploaded!",
+        downloadUrl: `http://localhost:3005${uniqueDownloadLink}`,  // Adjust for production domain if needed
+        fileId,
+      });
+    });
+
+    req.on('error', (err) => {
+      console.error("❌ Stream error:", err.message);
+      res.status(500).json({ error: "Stream error" });
+    });
+
   } catch (error) {
     console.error("❌ Upload error:", error.message);
     res.status(500).json({ error: error.message });
-  } finally {
-    fs.unlinkSync(req.file.path);
   }
 });
 
-// Generate Signed URL
+// Helper to Upload Buffer Directly to B2
+async function uploadFileToS3Buffer(fileBuffer, fileName) {
+  await s3.putObject({
+    Bucket: B2_BUCKET_NAME,
+    Key: fileName,
+    Body: fileBuffer,
+  }).promise();
+}
+
+// Generate Signed URL for Downloads
 async function generateSignedUrl(fileName) {
   return s3.getSignedUrl("getObject", {
     Bucket: B2_BUCKET_NAME,
     Key: fileName,
-    Expires: 600,
+    Expires: 600, // 10 minutes
   });
 }
 
-// Download File
+// Download File Endpoint
 app.get("/download/:fileId", async (req, res) => {
   try {
     const { fileId } = req.params;
@@ -140,6 +98,7 @@ app.get("/download/:fileId", async (req, res) => {
     }
 
     const { fileName, expiryDate } = fileMetadata[fileId];
+
     if (expiryDate && Date.now() > expiryDate) {
       await deleteFile(fileId);
       return res.status(404).sendFile(path.join(__dirname, "public", "error.html"));
@@ -164,7 +123,7 @@ app.get("/download/:fileId", async (req, res) => {
   }
 });
 
-// Delete File Function
+// Delete File (Internal Cleanup Helper)
 async function deleteFile(fileId) {
   try {
     const fileName = fileMetadata[fileId]?.fileName;
@@ -175,27 +134,29 @@ async function deleteFile(fileId) {
       Key: fileName,
     }).promise();
 
-    console.log(`🗑️ File ${fileName} deleted.`);
     delete fileMetadata[fileId];
+    console.log(`🗑️ Deleted file: ${fileName}`);
   } catch (error) {
     console.error("❌ Delete error:", error.message);
   }
 }
 
-// Manual Delete API
+// Manual Delete Endpoint (optional)
 app.delete("/delete/:fileId", async (req, res) => {
   try {
     await deleteFile(req.params.fileId);
-    res.json({ message: "🗑️ File deleted successfully." });
+    res.json({ message: "✅ File deleted successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Handle 404 Errors (For any other routes)
+// Handle 404 Errors (For unknown routes)
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, "public", "error.html"));
 });
 
 // Start Server
-app.listen(3005, () => console.log("🚀 Server running on port 3005"));
+app.listen(3005, () => {
+  console.log("🚀 Server running on port 3005");
+});
