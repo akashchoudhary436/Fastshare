@@ -32,7 +32,7 @@ const CloudUpload = () => {
     }
 
     const headers = {
-      "Content-Type": "application/octet-stream",
+      "Content-Type": "application/octet-stream",  // Important!
       "X-File-Name": encodeURIComponent(file.name),
     };
 
@@ -48,9 +48,11 @@ const CloudUpload = () => {
     try {
       setUploading(true);
 
-      const response = await axios.post("https://fastshare-rj89.vercel.app/upload", file, {
-        headers,
-      });
+      const response = await axios.post(
+        "https://fastshare-rj89.vercel.app/upload",
+        file, // This works because axios automatically converts `file` to binary stream
+        { headers }
+      );
 
       setDownloadLink(response.data.downloadUrl);
     } catch (error) {
