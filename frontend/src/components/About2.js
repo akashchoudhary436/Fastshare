@@ -14,7 +14,7 @@ const About = () => {
           It’s a decentralized approach that makes large data sharing quicker and more reliable.
         </p>
                   <div className="about-buttons-container">
-                    <Link to="http://localhost:5001/" className="secondary-button">
+                    <Link to="https://torrent.fastsharetorrent.me/" className="secondary-button">
                       Learn More
                     </Link>
         </div>
