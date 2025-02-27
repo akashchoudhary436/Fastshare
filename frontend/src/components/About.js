@@ -28,11 +28,6 @@ const About = () => {
           <Link to="/sender" className="secondary-button">
             Learn More
           </Link>
-          {/* 
-          <button className="watch-video-button">
-            <BsFillPlayCircleFill /> Watch Video
-          </button>
-          */}
         </div>
       </div>
      

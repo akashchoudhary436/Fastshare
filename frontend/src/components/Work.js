@@ -9,7 +9,7 @@ const Work = () => {
   const workInfoData = [
     {
       image: <img src={socketio} alt="socketio" style={{ width: '300px', height: 'auto' }} /> ,
-      title: <h3 style={{ color: '#fe9e0d', fontSize: '4rem' }}>Webrtc</h3>,
+      title: <h3 style={{ color: '#fe9e0d', fontSize: '4rem' }}>WebRTC</h3>,
       text: "WebRTC enables real-time peer-to-peer audio, video, and data sharing between browsers without a dedicated server..",
     },
     {

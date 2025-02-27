@@ -1,136 +1,201 @@
+const express = require("express");
+const path = require("path");
+const multer = require("multer");
+const AWS = require("aws-sdk");
+const fs = require("fs");
+const schedule = require("node-schedule");
+const { v4: uuidv4 } = require("uuid");
+const cors = require("cors");
 
-require('dotenv').config();
-const express = require('express');
-const multer = require('multer');
-const fs = require('fs');
-const axios = require('axios');
-const path = require('path');
-const cors = require('cors');
-const crypto = require('crypto'); // For SHA1 hashing
-
-// Set up your Backblaze B2 credentials from the .env file
-const {
-  B2_APPLICATION_KEY_ID,
-  B2_APPLICATION_KEY,
-  BUCKET_ID,
-  ENDPOINT // Custom Endpoint if needed
-} = process.env;
-
-console.log('B2 Application Key ID:', B2_APPLICATION_KEY_ID);
-console.log('Bucket ID:', BUCKET_ID);
-
-// Initialize the Express server
 const app = express();
-
-// Middleware to parse JSON and URL-encoded data
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+app.use(express.static("public"));
 
-// Set up Multer for handling file uploads to a temporary location
-const upload = multer({
-  dest: 'uploads/' // Temporary storage for uploaded files
+const upload = multer({ dest: "uploads/" });
+
+// Backblaze B2 S3 Credentials
+const B2_KEY_ID = "0055831ec347a1e0000000002";
+const B2_APPLICATION_KEY = "K005RfJbuMWspwm//7PdSr7uemDBKbc";
+const B2_BUCKET_NAME = "fastshareapp";
+const B2_ENDPOINT = "https://s3.us-east-005.backblazeb2.com";
+
+const s3 = new AWS.S3({
+  endpoint: B2_ENDPOINT,
+  accessKeyId: B2_KEY_ID,
+  secretAccessKey: B2_APPLICATION_KEY,
+  signatureVersion: "v4",
 });
 
-// Get B2 Authorization Token
-async function getB2AuthToken() {
-  const credentials = Buffer.from(`${B2_APPLICATION_KEY_ID}:${B2_APPLICATION_KEY}`).toString('base64');
+let fileMetadata = {}; // Track file expiration and download limits
 
-  try {
-    const response = await axios({
-      method: 'get',
-      url: 'https://api.backblazeb2.com/b2api/v2/b2_authorize_account',
-      headers: {
-        Authorization: `Basic ${credentials}`
-      }
-    });
+// Optimized Multipart Upload Function
+async function uploadFileToS3(filePath, fileName) {
+  const fileSize = fs.statSync(filePath).size;
+  const partSize = 5 * 1024 * 1024; // 50MB per part
+  const numParts = Math.ceil(fileSize / partSize);
 
-    const { authorizationToken, apiUrl } = response.data;
-    return { authorizationToken, apiUrl };
-  } catch (error) {
-    console.error('Error authenticating with B2:', error.response.data);
-    throw new Error('Failed to authenticate with Backblaze B2.');
+  console.log(`🚀 Uploading file in ${numParts} parts (Parallel Mode)...`);
+
+  // Start Multipart Upload
+  const { UploadId } = await s3.createMultipartUpload({
+    Bucket: B2_BUCKET_NAME,
+    Key: fileName,
+  }).promise();
+
+  const fileBuffer = fs.readFileSync(filePath);
+  let uploadPromises = [];
+
+  for (let partNumber = 1; partNumber <= numParts; partNumber++) {
+    const start = (partNumber - 1) * partSize;
+    const end = Math.min(start + partSize, fileSize);
+    const chunk = fileBuffer.slice(start, end);
+
+    // Upload each part asynchronously and store its result
+    uploadPromises.push(
+      s3.uploadPart({
+        Bucket: B2_BUCKET_NAME,
+        Key: fileName,
+        UploadId,
+        PartNumber: partNumber,
+        Body: chunk,
+      }).promise().then((data) => ({
+        ETag: data.ETag,
+        PartNumber: partNumber,
+      }))
+    );
   }
-}
 
-// Upload file to Backblaze B2
-async function uploadFileToB2(filePath, fileName) {
-  console.log('Uploading file:', filePath, 'as', fileName);
-  
-  // Get authorization token and API URL
-  const { authorizationToken, apiUrl } = await getB2AuthToken();
+  // Wait for all parts to upload
+  let uploadedParts = await Promise.all(uploadPromises);
 
-  try {
-    // Get upload URL
-    const uploadUrlResponse = await axios.post(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
-      bucketId: BUCKET_ID,
-    }, {
-      headers: { Authorization: authorizationToken },
-    });
+  // ✅ Fix: Ensure parts are sorted before finalizing upload
+  uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber);
 
-    const { uploadUrl, authorizationToken: uploadToken } = uploadUrlResponse.data;
+  console.log("🔄 Completing multipart upload...");
+  await s3.completeMultipartUpload({
+    Bucket: B2_BUCKET_NAME,
+    Key: fileName,
+    UploadId,
+    MultipartUpload: { Parts: uploadedParts },
+  }).promise();
 
-    // Read the file into memory (instead of streaming)
-    const fileBuffer = fs.readFileSync(filePath);
-    const fileHash = crypto.createHash('sha1').update(fileBuffer).digest('hex');
-
-    // Upload the file to B2
-    const response = await axios({
-      method: 'post',
-      url: uploadUrl,
-      headers: {
-        Authorization: uploadToken,
-        'Content-Type': 'application/octet-stream',
-        'X-Bz-File-Name': fileName,
-        'X-Bz-Content-Sha1': fileHash,
-        'Content-Length': fileBuffer.length, // Set the content length explicitly
-        'X-Bz-Info-Author': 'your-name', // Optional custom file metadata
-      },
-      data: fileBuffer,  // Use buffer instead of stream
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error('Error during file upload:', error.response ? error.response.data : error.message);
-    throw new Error('Failed to upload file to Backblaze B2.');
-  }
+  console.log("✅ Parallel Multipart Upload Complete!");
 }
 
 
-// Define the API endpoint for file uploads
-app.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).send('No file uploaded.');
-  }
-
+// Upload File Endpoint
+app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    const fileName = `${Date.now()}_${req.file.originalname}`;
-    const filePath = path.join(__dirname, req.file.path); // Make sure this path is correct
+    if (!req.file) return res.status(400).json({ error: "❌ No file uploaded!" });
 
-    const uploadResponse = await uploadFileToB2(filePath, fileName);
+    const { days, maxDownloads } = req.body;
+    const filePath = req.file.path;
+    const fileName = req.file.originalname;
+    const fileId = uuidv4();
+    const uniqueDownloadLink = `/download/${fileId}`;
 
-    // Optionally remove the file from local storage
-    fs.unlinkSync(filePath);
+    await uploadFileToS3(filePath, fileName);
 
-    res.status(200).json({
-      message: 'File uploaded successfully',
-      fileId: uploadResponse.fileId,
-      fileName: fileName,
-      fileUrl: `${ENDPOINT}/${fileName}`, // Adjust based on your setup
+    fileMetadata[fileId] = {
+      fileName,
+      maxDownloads: parseInt(maxDownloads) || Infinity,
+      expiryDate: days ? Date.now() + days * 86400000 : null,
+    };
+
+    if (days) {
+      schedule.scheduleJob(new Date(fileMetadata[fileId].expiryDate), async () => {
+        await deleteFile(fileId);
+      });
+    }
+
+    res.json({
+      message: "✅ File uploaded!",
+      downloadUrl: `http://localhost:3005${uniqueDownloadLink}`,
+      fileId,
     });
   } catch (error) {
-    console.error('Error uploading file:', error.message); // Log the error
+    console.error("❌ Upload error:", error.message);
+    res.status(500).json({ error: error.message });
+  } finally {
+    fs.unlinkSync(req.file.path);
+  }
+});
+
+// Generate Signed URL
+async function generateSignedUrl(fileName) {
+  return s3.getSignedUrl("getObject", {
+    Bucket: B2_BUCKET_NAME,
+    Key: fileName,
+    Expires: 600,
+  });
+}
+
+// Download File
+app.get("/download/:fileId", async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    if (!fileMetadata[fileId]) {
+      return res.status(404).sendFile(path.join(__dirname, "public", "error.html"));
+    }
+
+    const { fileName, expiryDate } = fileMetadata[fileId];
+    if (expiryDate && Date.now() > expiryDate) {
+      await deleteFile(fileId);
+      return res.status(404).sendFile(path.join(__dirname, "public", "error.html"));
+    }
+
+    if (fileMetadata[fileId].maxDownloads === 0) {
+      await deleteFile(fileId);
+      return res.status(403).sendFile(path.join(__dirname, "public", "error.html"));
+    }
+
+    const signedUrl = await generateSignedUrl(fileName);
+    fileMetadata[fileId].maxDownloads--;
+
+    if (fileMetadata[fileId].maxDownloads === 0) {
+      setTimeout(async () => await deleteFile(fileId), 5000);
+    }
+
+    res.redirect(signedUrl);
+  } catch (error) {
+    console.error("❌ Download error:", error.message);
+    res.status(500).sendFile(path.join(__dirname, "public", "error.html"));
+  }
+});
+
+// Delete File Function
+async function deleteFile(fileId) {
+  try {
+    const fileName = fileMetadata[fileId]?.fileName;
+    if (!fileName) return;
+
+    await s3.deleteObject({
+      Bucket: B2_BUCKET_NAME,
+      Key: fileName,
+    }).promise();
+
+    console.log(`🗑️ File ${fileName} deleted.`);
+    delete fileMetadata[fileId];
+  } catch (error) {
+    console.error("❌ Delete error:", error.message);
+  }
+}
+
+// Manual Delete API
+app.delete("/delete/:fileId", async (req, res) => {
+  try {
+    await deleteFile(req.params.fileId);
+    res.json({ message: "🗑️ File deleted successfully." });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// A simple health check endpoint to test the server
-app.get('/', (req, res) => {
-  res.send('Backblaze B2 File Upload Server is Running.');
+// Handle 404 Errors (For any other routes)
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, "public", "error.html"));
 });
 
-// Start the server on a specific port
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// Start Server
+app.listen(3005, () => console.log("🚀 Server running on port 3005"));

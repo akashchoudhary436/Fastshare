@@ -1,7 +1,7 @@
 import React from "react";
 import AboutBackground from "../Assets/about-background.png";
 import p2p from "../Assets/ppp.png";
-
+import { Link } from "react-router-dom";
 const About = () => {
   return (
     <div className="about-section-container">
@@ -13,20 +13,10 @@ const About = () => {
         <p className="primary-text">
           It’s a decentralized approach that makes large data sharing quicker and more reliable.
         </p>
-        <div className="about-buttons-container">
-          <a 
-            href="https://torrent.fastsharetorrent.me/" 
-            className="secondary-button" 
-            target="_blank" 
-            rel="noopener noreferrer"
-          >
-            Learn More
-          </a>
-          {/* 
-          <button className="watch-video-button">
-            <BsFillPlayCircleFill /> Watch Video
-          </button>
-          */}
+                  <div className="about-buttons-container">
+                    <Link to="http://localhost:5001/" className="secondary-button">
+                      Learn More
+                    </Link>
         </div>
       </div>
 
