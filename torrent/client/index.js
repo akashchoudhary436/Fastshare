@@ -34,11 +34,11 @@ const rtcConfig = {
 
 //Torrent Tracker
 globalThis.WEBTORRENT_ANNOUNCE = [
-  //'wss://tracker.fastsharetorrent.me',
+  'wss://tracker.fastsharetorrent.me',
  // 'wss://tracker.files.fm:7073/announce',
  // 'ws://tracker.files.fm:7072/announce',
 // 'wss://tracker.webtorrent.dev',
-'ws://localhost:8000/'
+//'ws://localhost:8000/'
 
 
 
@@ -124,12 +124,23 @@ function onFiles(files) {
     debug(' - %s (%s bytes)', file.name, file.size);
   });
 
+  // Calculate the total size of selected files
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+
+  // Check if the total size exceeds the 10 GB limit
+  const sizeLimit = 1 * 1024 * 1024 * 1024; // 10 GB in bytes
+  if (totalSize > sizeLimit) {
+    util.error('File limit exceeded: Insufficient RAM to handle the upload.');
+    return;
+  }
+
   // .torrent file = start downloading the torrent
   files.filter(isTorrentFile).forEach(downloadTorrentFile);
 
   // everything else = seed these files
   seed(files.filter(isNotTorrentFile));
 }
+
 
 // Check if file is a torrent file
 function isTorrentFile(file) {
