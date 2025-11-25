@@ -2,7 +2,7 @@
   "name": "tracker",
   "version": "1.0.0",
   "description": "A BitTorrent tracker server implemented with bittorrent-tracker",
-  "main": "tracker.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
