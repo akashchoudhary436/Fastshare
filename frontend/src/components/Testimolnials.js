@@ -2,38 +2,35 @@ import React from 'react';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import sejal from "../Assets/sejal_photo.jpeg";
-import Roshani from "../Assets/roshani_photo.jpeg";
-import abhi from "../Assets/abhi_photo.jpeg"
-import akash from "../Assets/akash_photo.jpeg"
+import personPic from "../Assets/person_pic.jpg";
 
 
 const testimonials = [
   {
     id: 1,
     name: "Sejal Ingale",
-    image: sejal,
+    image: personPic,
     text: "A very good platform to find all services in one place",
     rating: 5,
   },
   {
     id: 2,
     name: "Akash Choudhary",
-    image: akash,
+    image: personPic,
     text: "Seamless sharing experience, awesome!",
     rating: 5,
   },
   {
     id: 3,
     name: "Roshani Dubey",
-    image: Roshani,
+    image: personPic,
     text: "Easy sharing with intutive UI",
     rating: 5,
   },
   {
     id: 4,
     name: "Abhishek Bharambe",
-    image: abhi,
+    image: personPic,
     text: "Cool got everything on this one platform !",
     rating: 5,
   },
