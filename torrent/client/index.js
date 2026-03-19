@@ -38,7 +38,7 @@ globalThis.WEBTORRENT_ANNOUNCE = [
    'wss://fastshare-fxl8.onrender.com',
  // 'ws://tracker.files.fm:7072/announce',
 // 'wss://tracker.webtorrent.dev',
-//'ws://localhost:8000/'
+'ws://localhost:8000/'
 
 
 

@@ -17,8 +17,7 @@
   "author": "Akash",
   "license": "ISC",
   "dependencies": {
-    "bittorrent-tracker": "^11.1.2",
-    "tracker": "file:"
+    "bittorrent-tracker": "^11.1.2"
   },
   "devDependencies": {
     "eslint": "^8.0.0"

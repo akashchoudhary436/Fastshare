@@ -1,11 +1,11 @@
 import { Server } from 'bittorrent-tracker'
 
 const server = new Server({
-  udp: false, // Disable UDP server
-  http: false, // Disable HTTP server
+  udp: true, 
+  http: true, // Disable HTTP server
   ws: true, // Enable WebSocket server
   stats: true, // Enable web-based statistics
-  trustProxy: false, // Enable trusting x-forwarded-for header for remote IP
+  trustProxy: true, // Enable trusting x-forwarded-for header for remote IP
   filter: function (infoHash, params, cb) {
     // Allow all torrents
     cb(null);
@@ -37,7 +37,7 @@ server.on('listening', function () {
 
 // Start tracker server listening! Use a specific port number.
 const port = 8000; // Example port number
-const hostname = "0.0.0.0"; // Bind to all available network interfaces
+const hostname = "localhost"; // Bind to localhost
 server.listen(port, hostname, () => {
   console.log('Tracker server is listening on port ' + port + '...')
 })
